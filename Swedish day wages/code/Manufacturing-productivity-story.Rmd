@@ -220,9 +220,9 @@ df %>%
 
 ```
 
-If we plot a stacked area graph, we can see that exports and imports grow as a share of GDP after 1860, with the import band widening markedly prior to the First World War.
+If we plot a stacked area graph as in Figure \@ref(fig:exports-imports-stack), we can see that exports and imports grow as a share of GDP after 1860, with the import band widening markedly prior to the First World War.
 
-```{r}
+```{r, exports-imports-stack, fig.cap="Components of GDP in Sweden: 1800-2000. Source: Historical national accounts for Sweden 1800-2000 (Historiska nationalräkenskaper för Sverige 1800-2000) by Rodney Edvinsson"}
 gg_gdp <- df %>% 
     pivot_longer(-year) %>% 
     mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
@@ -252,9 +252,9 @@ The screenshot below shows the quantity of commodities imported between 1908 and
 knitr::include_graphics(normalizePath("~/Recon/PhD-Ideas/Swedish day wages/images/swedish-imports-1908-1928.PNG"))
 ```
 
-Again due to the tabular nature of the data, it would be possible to use layout parser to extract this data into a machine readable format without much trouble.
+Again due to the tabular nature of the data, it would be possible to use layout parser to extract this data into a machine readable format without much trouble. We could then look at the compositio of imports and examine the displacement effect on domestic food manufacturing.
 
-### Price Effect
+### Price effect
 
 In a similar vein to the trade effect and the technology effects, if competition from imports drives the cost of manufactured food products down, or technology makes it cheaper to produce, it follows that manufactured food would fall as a proportion of manufactured output. We can assess this by seeing if the price of food products fell markedly. We have access to some food price indices from Jonas Ljungberg's *Prices and Market Processes in Sweden 1885–1969 [Priser och marknadskrafter i Sverige 1885–1969] Lund, 1990*. 
 
