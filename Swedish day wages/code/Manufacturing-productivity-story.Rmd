@@ -1,0 +1,138 @@
+---
+title: "Manufacturing-productivity-story"
+author: "JJayes"
+date: "07/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(scales)
+library(glue)
+theme_set(theme_light())
+```
+
+
+## Purpose
+
+Hi Kerstin, I had some thoughts that I have put together here, perhaps we can discuss it a bit more, as your insights will be so useful!
+
+In short, I think it would be interesting to investigate the geographic relationships between increasing worker productivity in manufacturing in Sweden. 
+
+The way in to the story is to look at how manufactured food products make up less and less of GNP over time, and then try to explain why this is the case.
+
+### Context
+
+There is a drastic decline in the share of manufacturing output made up by food products after 1800. Prior to 1900, the greatest gains are made by textiles, mining and wood industries.
+
+```{r}
+df <- read_excel("data/nominal-gross-output-1800-2000.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>% 
+    pivot_longer(-type_of_activity, names_to = "manu_activity") %>% 
+    rename(year = type_of_activity) %>% 
+    mutate(manu_activity = str_to_sentence(str_replace_all(manu_activity, "_", " ")))
+
+library(ggiraph)
+
+gg_industry <- df %>% 
+    filter(!str_detect(manu_activity, "Total")) %>%
+    # mutate(value_rounded = round(value, 2),
+    #        text = glue("{manu_activity}\n{year}\nNominal output\n{value_rounded} m SEK")) %>% 
+    ggplot(aes(year, value, fill = manu_activity,
+               tooltip = manu_activity)) +
+    geom_area_interactive(position = "fill") +
+    # scale_y_log10() +
+    theme(legend.position = "bottom") +
+    scale_y_continuous(labels = percent_format(scale = 100)) +
+    labs(x = NULL,
+         y = "Share of total\nmanufacturing output",
+         fill = NULL) +
+    guides(fill = guide_legend(nrow = 5))
+
+girafe(
+  ggobj = gg_industry,
+  width_svg = 6,
+  height_svg = 6*0.618)
+```
+
+Concurrently, there is a decline in the share of wages going to the agricultural sector:
+
+The series on wages of employees by activity from [Rodney Edvinson](https://ekh.lu.se/en/research/economic-history-data/lu-madd/prices-and-wages) shows "U. Wages and salaries (including social benefits) of employees (current factor values, million SEK) of various types of activities."
+
+It is evident that while in 1850, the largest wage share went to agriculture, and that by 2000, this was the lowest, being overtaken by real estate in 1986.
+
+```{r}
+df <- read_excel("data/wages-by-industry-clean.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>% 
+    pivot_longer(-year, names_to = "industry", values_to = "wages") %>% 
+    mutate(industry = str_to_sentence(str_replace_all(industry, "_", " ")),
+           industry = case_when(str_detect(industry, "Other private services") ~ "Other private services",
+                                TRUE ~ industry))
+
+df %>% 
+    filter(!str_detect(industry, "Total")) %>% 
+    mutate(flag = ifelse(str_detect(industry, "Agriculture"), "Agriculture", "Other industry")) %>% 
+    ggplot(aes(year, wages, lty = flag, colour = industry)) +
+    geom_line(cex = 1) +
+    theme(legend.position = "bottom") +
+    scale_y_log10(labels = number_format()) +
+    guides(colour = guide_legend(nrow = 4),
+           lty = guide_legend(nrow = 2)) +
+    labs(x = NULL,
+         y = "Wages in million SEK (Log scale)",
+         colour = "Industry",
+         lty = NULL)
+```
+
+there is an increase in the population, with a discernable trend in more births and marriages taking place each year in the 19th century:
+
+```{r}
+df <- read_excel("data/Swedish Population and Population Changes 1749–2020.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>%
+  mutate(across(where(is.character), parse_number))
+
+df %>%
+  pivot_longer(-year, names_to = "series", values_to = "value") %>%
+  mutate(series = str_to_sentence(str_replace_all(series, "_", " "))) %>%
+  mutate(chunk = year - year %% 5) %>%
+  group_by(chunk, series) %>%
+  mutate(value = mean(value, na.rm = T)) %>%
+  ungroup() %>%
+  # filter(series != "Population") %>%
+  mutate(group = case_when(
+    str_detect(series, "Marriages|Live births") ~ "Fertility",
+    str_detect(series, "Population") ~ "Population",
+    TRUE ~ "C"
+  )) %>%
+  filter(group != "C") %>%
+  mutate(group = fct_relevel(group, "Population")) %>%
+  ggplot(aes(year, value, colour = series)) +
+  geom_line() +
+  scale_y_continuous(labels = number_format()) +
+  facet_wrap(~group, nrow = 2, scales = "free_y") +
+  labs(
+    x = NULL,
+    y = "Population\nBirths and Marriages per year",
+    colour = NULL
+  )
+```
+
+Lennart Schön tells us that population growth took off in the 1820s, coinciding with a decline in the infant mortality rate that is attriubted to "peace, vaccines and potatoes" 
+
+There are maybe three  forces that drive the decline in food output as a share of total manufacturing output - a productivity/technology effect, a trade effect and a price effect. 
+
+### The productivity/technology effect
+
+We begin with the productivity/technology effect. 
+
+### Price Effect
+
+If workers can produce manufactured food products more efficiently, it follows that the expenditure of a family on food will fall

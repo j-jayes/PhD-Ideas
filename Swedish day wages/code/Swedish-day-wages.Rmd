@@ -2,11 +2,12 @@
 title: "Swedish-day-wages"
 author: "JJayes"
 date: "06/09/2021"
-output: html_document
+output: 
+    html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 
 library(tidyverse)
@@ -83,7 +84,7 @@ gg_industry <- df %>%
     theme(legend.position = "bottom") +
     scale_y_continuous(labels = percent_format(scale = 100)) +
     labs(x = NULL,
-         y = "Share of total manufacturing output",
+         y = "Share of total\nmanufacturing output",
          fill = NULL) +
     guides(fill = guide_legend(nrow = 5))
 
@@ -158,5 +159,142 @@ df %>%
     labs(x = NULL,
          y = "Wages in million SEK (Log scale)",
          colour = "Industry")
+```
+
+
+### What about population??
+
+Population and Population Changes 1749–2020 from [scb.se](https://www.scb.se/en/finding-statistics/statistics-by-subject-area/population/population-composition/population-statistics/pong/tables-and-graphs/yearly-statistics--the-whole-country/population-and-population-changes/)
+
+```{r}
+df <- read_excel("data/Swedish Population and Population Changes 1749–2020.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>%
+  mutate(across(where(is.character), parse_number))
+
+# df %>% 
+#     pivot_longer(-year, names_to = "series", values_to = "value") %>% 
+#     mutate(series = str_to_sentence(str_replace_all(series, "_", " "))) %>% 
+#     filter(series != "Population") %>% 
+#     ggplot(aes(year, value, colour = series)) +
+#     geom_line()
+```
+
+Maybe some smoothing?
+
+```{r}
+df %>%
+  pivot_longer(-year, names_to = "series", values_to = "value") %>%
+  mutate(series = str_to_sentence(str_replace_all(series, "_", " "))) %>%
+  mutate(chunk = year - year %% 5) %>%
+  group_by(chunk, series) %>%
+  mutate(value = mean(value, na.rm = T)) %>%
+  ungroup() %>%
+  filter(series != "Population") %>%
+  mutate(group = case_when(
+    str_detect(series, "Deaths|Live births") ~ "A",
+    str_detect(series, "Marriages|Divorces") ~ "B",
+    TRUE ~ "C"
+  )) %>%
+  ggplot(aes(year, value, colour = series)) +
+  geom_line() +
+  facet_wrap(~group, nrow = 3, scales = "free_y") +
+  scale_y_continuous(labels = number_format()) +
+  labs(
+    x = NULL,
+    y = "Absolute number per five years",
+    colour = "Series"
+  )
+```
+
+
+Same as a share of population
+
+```{r}
+df %>%
+  pivot_longer(-c(year, population), names_to = "series", values_to = "value") %>%
+  mutate(
+    series = str_to_sentence(str_replace_all(series, "_", " ")),
+    value = value / population
+  ) %>%
+  mutate(chunk = year - year %% 5) %>%
+  group_by(chunk, series) %>%
+  mutate(value = mean(value, na.rm = T)) %>%
+  ungroup() %>%
+  mutate(group = case_when(
+    str_detect(series, "Deaths|Live births") ~ "A",
+    str_detect(series, "Marriages|Divorces") ~ "B",
+    TRUE ~ "C"
+  )) %>%
+  ggplot(aes(year, value, colour = series)) +
+  geom_line() +
+  facet_wrap(~group, nrow = 3, scales = "free_y") +
+  scale_y_continuous(labels = number_format()) +
+  labs(
+    x = NULL,
+    y = "Share by population per five years",
+    colour = "Series"
+  )
+    
+```
+
+
+### Price series
+
+Downloaded from the LU MEDD, originally published in [Ljungberg, J., Prices and Market Processes in Sweden 1885–1969 [Priser och marknadskrafter i Sverige 1885–1969] Lund, 1990.](https://ekh.lu.se/en/research/economic-history-data/lu-madd/prices-and-wages/industrial-products)
+
+Note: Price Index 1910/12 = 100
+
+```{r}
+df <- read_excel("price-indicies/Collected price indexes.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>% 
+    rename_with(~ str_remove_all(.x, "_price_index_1910_12_100")) %>% 
+    rename(producer_price_index = producer)
+
+df %>% 
+    pivot_longer(-year) %>% 
+    filter(!str_detect(name, "producer_price_index")) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " ")),
+           flag = ifelse(str_detect(name, "Foodstuff"), "Foodstuff", "Other")) %>% 
+    ggplot(aes(year, value, lty = flag, colour = name)) +
+    geom_line(cex = 1)
+```
+
+Takeaways: So it seems that Food has become relatively more expensive? At the first hump, it's second from the bottom, then there is an uptick so that by the end of the 70s it is the third highest.
+
+TODO: Maybe have a price index on one axis, and the share of total production on the other, and then on the third axis have time?
+
+What about a comparison of the foodstuffs index compared to the total?
+
+```{r}
+df %>% 
+    pivot_longer(-year) %>% 
+    filter(str_detect(name, "producer_price_index|foodstuff")) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    ggplot(aes(year, value, colour = name)) +
+    geom_line(cex = 1)
+```
+
+Foodstuffs are below the PPI, then in maybe 1940 there is a divergence??
+
+
+Go back and read Schön on "Peace, potatoes and something" - perhaps I can look more closely at the change in consumption patterns by households and tie this to the increasing agric. productivity?
+
+
+```{r}
+df <- read_excel("food-price-indicies/Food-price-indicies-collected.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>% 
+    rename_with(~ str_remove_all(.x, "_price_index_1910_12_100"))
+
+df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    ggplot(aes(year, value, colour = name)) +
+    geom_line(cex = 1)
 ```
 
