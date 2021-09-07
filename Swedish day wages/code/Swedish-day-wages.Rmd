@@ -295,6 +295,47 @@ df %>%
     pivot_longer(-year) %>% 
     mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
     ggplot(aes(year, value, colour = name)) +
-    geom_line(cex = 1)
+    geom_line(cex = 1) +
+    labs(x = NULL,
+         y = "Price index (1910 = 100)")
+
 ```
 
+
+```{r}
+df <- read_excel("data/F. Nominal values (in purchasers prices million SEK) of different expenditures and of GDP by expenditure.xlsx") %>% 
+    janitor::clean_names()
+
+df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    filter(name %in% c("Export", "Import", "Gdp")) %>% 
+    ggplot(aes(year, value, colour = name)) +
+    geom_line(cex = 1) +
+    scale_y_log10(labels = number_format()) +
+    labs(y = "Nominal values \n(in purchasers’ prices, million SEK)")
+
+gg_gdp <- df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    filter(!name %in% c("Gdp"),
+           !str_detect(name, "Changes")) %>% 
+    ggplot(aes(year, value, fill = name,
+               tooltip = name)) +
+    geom_area_interactive(position = "fill") +
+    scale_y_continuous(labels = percent_format(scale = 100)) +
+    theme(legend.position = "bottom") +
+    labs(x = NULL,
+         y = "Share of GDP",
+         fill = NULL) +
+    guides(fill = guide_legend(nrow = 2))
+
+girafe(
+  ggobj = gg_gdp,
+  width_svg = 6,
+  height_svg = 6*0.618)
+
+```
+
+
+### Glass production

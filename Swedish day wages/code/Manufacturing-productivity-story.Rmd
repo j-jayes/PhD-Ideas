@@ -1,17 +1,28 @@
 ---
-title: "Manufacturing-productivity-story"
+title: "Manufacturing productivity story"
 author: "JJayes"
 date: "07/09/2021"
-output: html_document
+output:
+    bookdown::html_document2:
+        toc: true
+        toc_float: true
+        number_sections: false
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F, fig.align = "center")
 
 library(tidyverse)
 library(scales)
 library(glue)
+library(readxl)
+library(wesanderson)
 theme_set(theme_light())
+
+setwd("~/Recon/PhD-Ideas/Swedish day wages")
+
+opts <- options(knitr.kable.NA = "")
+
 ```
 
 
@@ -21,17 +32,17 @@ Hi Kerstin, I had some thoughts that I have put together here, perhaps we can di
 
 In short, I think it would be interesting to investigate the geographic relationships between increasing worker productivity in manufacturing in Sweden. 
 
-The way in to the story is to look at how manufactured food products make up less and less of GNP over time, and then try to explain why this is the case.
+The way in to the story could be to look at how manufactured food products make up less and less of GNP over time, and then try to explain why this is the case.
 
 ### Context
 
-There is a drastic decline in the share of manufacturing output made up by food products after 1800. Prior to 1900, the greatest gains are made by textiles, mining and wood industries.
+There is a drastic decline in the share of manufacturing output made up by food products after 1800, as visible in Figure \@ref(fig:manu-output). Prior to 1900, the greatest gains are made by textiles, mining and wood industries.
 
-```{r}
+```{r, manu-output, fig.cap="Manufacturing output from 1800 to 2000 in Sweden. Source: [Rodney Edvinsson via Historia.se](http://www.historia.se/nominaloutputvalueaddedinputofactivitiesinmanufacturing.xls)"}
 df <- read_excel("data/nominal-gross-output-1800-2000.xlsx") %>% 
     janitor::clean_names()
 
-df <- df %>% 
+df <- df %>%
     pivot_longer(-type_of_activity, names_to = "manu_activity") %>% 
     rename(year = type_of_activity) %>% 
     mutate(manu_activity = str_to_sentence(str_replace_all(manu_activity, "_", " ")))
@@ -48,6 +59,7 @@ gg_industry <- df %>%
     # scale_y_log10() +
     theme(legend.position = "bottom") +
     scale_y_continuous(labels = percent_format(scale = 100)) +
+    scale_fill_brewer(palette = "Paired") +
     labs(x = NULL,
          y = "Share of total\nmanufacturing output",
          fill = NULL) +
@@ -59,13 +71,13 @@ girafe(
   height_svg = 6*0.618)
 ```
 
-Concurrently, there is a decline in the share of wages going to the agricultural sector:
+Concurrently, there is a decline in the share of wages going to the agricultural sector (as distinct from manufactured food products).
 
 The series on wages of employees by activity from [Rodney Edvinson](https://ekh.lu.se/en/research/economic-history-data/lu-madd/prices-and-wages) shows "U. Wages and salaries (including social benefits) of employees (current factor values, million SEK) of various types of activities."
 
-It is evident that while in 1850, the largest wage share went to agriculture, and that by 2000, this was the lowest, being overtaken by real estate in 1986.
+In Figure \@ref(fig:agric-wage-share) it is evident that while in 1850, the largest wage share went to agriculture, and that by 2000, this was the lowest, being overtaken by real estate in 1986. What a turn around, go specialization and trade!
 
-```{r}
+```{r, agric-wage-share, fig.cap="Evolution of sectoral wage shares in Sweden: 1850-2000"}
 df <- read_excel("data/wages-by-industry-clean.xlsx") %>% 
     janitor::clean_names()
 
@@ -75,24 +87,29 @@ df <- df %>%
            industry = case_when(str_detect(industry, "Other private services") ~ "Other private services",
                                 TRUE ~ industry))
 
-df %>% 
-    filter(!str_detect(industry, "Total")) %>% 
-    mutate(flag = ifelse(str_detect(industry, "Agriculture"), "Agriculture", "Other industry")) %>% 
-    ggplot(aes(year, wages, lty = flag, colour = industry)) +
-    geom_line(cex = 1) +
-    theme(legend.position = "bottom") +
-    scale_y_log10(labels = number_format()) +
-    guides(colour = guide_legend(nrow = 4),
-           lty = guide_legend(nrow = 2)) +
-    labs(x = NULL,
-         y = "Wages in million SEK (Log scale)",
-         colour = "Industry",
-         lty = NULL)
+df %>%
+  filter(!str_detect(industry, "Total")) %>%
+  mutate(flag = ifelse(str_detect(industry, "Agriculture"), "Agriculture", "Other industry")) %>%
+  ggplot(aes(year, wages, lty = flag, colour = industry)) +
+  geom_line(cex = 1) +
+  theme(legend.position = "bottom") +
+  scale_y_log10(labels = number_format()) +
+  scale_color_manual(values = wesanderson::wes_palette(8, name = "Zissou1", type = "continuous")) +
+  guides(
+    colour = guide_legend(nrow = 4),
+    lty = guide_legend(nrow = 2)
+  ) +
+  labs(
+    x = NULL,
+    y = "Wages in million SEK (Log scale)",
+    colour = "Industry",
+    lty = NULL
+  )
 ```
 
-there is an increase in the population, with a discernable trend in more births and marriages taking place each year in the 19th century:
+Simultaneously, there is an increase in the population, with a discernible trend in more births and marriages taking place over time in the 19th century. This is shown in Figure \@ref(fig:pop-fert)
 
-```{r}
+```{r, pop-fert, fig.cap="Population, biths and marriages in Sweden: 1749-2020. Source: [Statistics Sweden](https://www.scb.se/en/finding-statistics/statistics-by-subject-area/population/population-composition/population-statistics/)"}
 df <- read_excel("data/Swedish Population and Population Changes 1749–2020.xlsx") %>% 
     janitor::clean_names()
 
@@ -125,14 +142,146 @@ df %>%
   )
 ```
 
-Lennart Schön tells us that population growth took off in the 1820s, coinciding with a decline in the infant mortality rate that is attriubted to "peace, vaccines and potatoes" 
+Lennart Schön tells us that population growth took off in the 1820s, coinciding with a decline in the infant mortality rate that is attriubted to "peace, vaccines and potatoes", among other explanations. Clearly, there was enough food to provide for an increasing population, and a diversification into other kinds of manufactured goods.
 
-There are maybe three  forces that drive the decline in food output as a share of total manufacturing output - a productivity/technology effect, a trade effect and a price effect. 
+There are maybe three forces that drive the decline in food products output as a share of total manufacturing output - a productivity/technology effect, an international trade effect and a price effect. 
 
 ### The productivity/technology effect
 
-We begin with the productivity/technology effect. 
+We begin with the productivity/technology effect, which is maybe the most interesting to disentangle.
+
+We have some really lovely records at our disposal! We start with an example of the production of manufactured products by region. The screenshot below shows the records of glass production from 1884. We have the number of employees on aggregate, the number of factories per region, and the number of chests of glass produced by type in each region.
+
+```{r, fig.align="center"}
+knitr::include_graphics(normalizePath("~/Recon/PhD-Ideas/Swedish day wages/images/glass-production-1884.PNG"))
+```
+
+Because of the tabular form of the data and the high quality scan, we can use the [Layout parser tool](https://github.com/Layout-Parser/layout-parser) to grab the data and put it into a usable form in no time at all. Table \@ref(tab:glass-prod-tab) shows the parsed data, neat! We see that Kronoberg County within Småland has the greatest number of factories producing glass in 1884, at 11.
+
+```{r, glass-prod-tab}
+# library(DT)
+# df <- read_excel("data/glass production.xlsx") %>%
+#   rename(Region = ...1) %>%
+#   datatable(caption = "Glass production in Sweden in 1884") %>%
+#   formatRound(
+#       digits = 0,
+#     2:6,
+#     mark = ","
+#   )
+
+df <- read_excel("data/glass production.xlsx") %>%
+  rename(Region = ...1) %>%
+  knitr::kable(caption = "Glass production in Sweden in 1884",
+               digits = 0,
+               format.args = list(big.mark = ",", scientific = FALSE))
+  
+df  
+```
+
+We also have information on the population of workers in each industry and region, differentiated by skill level. We have records of the number of masters, journeyman, and in some cases, apprentices by industry and region. *På svenska är de: mästare, gesän och lärlingar*.
+
+A screenshot is shown below which includes the number of glass workers from 1831.
+
+```{r, fig.align="center"}
+knitr::include_graphics(normalizePath("~/Recon/PhD-Ideas/Swedish day wages/images/masters and journeymen 1831.PNG"))
+```
+
+We could link this population of workers to the manufacture of different products by region and calculate some metric for units of output per worker as a proxy for productivity. Comparative advantage dictates that at outset, some regions will be better suited to the production of one good rather than another, and so there will be differences in our metric for levels of worker productivity. It will nevertheless be interesting to see the development of differences in units of output per worker **over time**.
+
+This might allow us to see how agglomerations of certain skills in a workforce, as proxied by their occupation, spill over into neighbouring areas, or if the data allows, spill over into regions which receive migrating workers with particular skills.
+
+<blockquote>
+An example of more fleshed out paper idea could be to match census data to the workers productivity measure in the different regions and see how the internal migration of skilled workers from one place to another translates to increased productivity in the receiving region over time.
+
+</blockquote>
+
+Examining the increasing productivity in different kinds of manufactured goods could help us disentangle the effect of an expanded production frontier in other manufactured goods, versus improved technology/productivity within the manufactured food sector.
+
+The remainder of this document details other explanations for the decrease in the share of manufactured food products in manufacturing output, and possible ways to examine the validity of these explanations.
+
+### Trade effect
+
+Another hypothesis could be that manufactured food products fell as a share of GDP due to increased trade and increased imports of manufactured food products from other countries. If this is the case, sales of other exported manufactured goods could more than make up for the decline in domestic manufactured food production through the financing of imports and changes in production away from manufactured foodstuffs.
+
+It appears that exports and imports grew in lock-step, making up a greater proportion of GDP towards the year 2000. It is difficult to tell from this figure whether there was a lag between the increase in exports and imports.
+
+```{r, exports-imports, fig.cap="Exports and imports compared to GDP in Sweden: 1800-2000. Source: Historical national accounts for Sweden 1800-2000 (Historiska nationalräkenskaper för Sverige 1800-2000) by Rodney Edvinsson"}
+df <- read_excel("data/F. Nominal values (in purchasers prices million SEK) of different expenditures and of GDP by expenditure.xlsx") %>% 
+    janitor::clean_names()
+
+df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    filter(name %in% c("Export", "Import", "Gdp")) %>% 
+    ggplot(aes(year, value, colour = name)) +
+    geom_line(cex = 1) +
+    scale_y_log10(labels = number_format()) +
+    labs(y = "Nominal values \n(in purchasers’ prices, million SEK) (log scale)")
+
+```
+
+If we plot a stacked area graph, we can see that exports and imports grow as a share of GDP after 1860, with the import band widening markedly prior to the First World War.
+
+```{r}
+gg_gdp <- df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    filter(!name %in% c("Gdp"),
+           !str_detect(name, "Changes")) %>% 
+    ggplot(aes(year, value, fill = name,
+               tooltip = name)) +
+    geom_area_interactive(position = "fill") +
+    scale_y_continuous(labels = percent_format(scale = 100)) +
+    theme(legend.position = "bottom") +
+    labs(x = NULL,
+         y = "Share of GDP",
+         fill = NULL) +
+    guides(fill = guide_legend(nrow = 2))
+
+girafe(
+  ggobj = gg_gdp,
+  width_svg = 6,
+  height_svg = 6*0.618)
+```
+
+Thanks to the work of Eli Hecksher, we have access to a series of trade data categorised by harmonised system (HS) codes from 1732 to 1970, collected and printed in one volume by SCB in 1972. This means that we can go beyond the aggregate to see what kinds of manufactured products where imported into Sweden, and if these displaced locally manufactured foodstuffs.
+
+The screenshot below shows the quantity of commodities imported between 1908 and 1929, along with their HS code classification, from the dataset mentioned above.
+
+```{r}
+knitr::include_graphics(normalizePath("~/Recon/PhD-Ideas/Swedish day wages/images/swedish-imports-1908-1928.PNG"))
+```
+
+Again due to the tabular nature of the data, it would be possible to use layout parser to extract this data into a machine readable format without much trouble.
 
 ### Price Effect
 
-If workers can produce manufactured food products more efficiently, it follows that the expenditure of a family on food will fall
+In a similar vein to the trade effect and the technology effects, if competition from imports drives the cost of manufactured food products down, or technology makes it cheaper to produce, it follows that manufactured food would fall as a proportion of manufactured output. We can assess this by seeing if the price of food products fell markedly. We have access to some food price indices from Jonas Ljungberg's *Prices and Market Processes in Sweden 1885–1969 [Priser och marknadskrafter i Sverige 1885–1969] Lund, 1990*. 
+
+We see in Figure \@ref(fig:food-prices) that between 1888 and World War One, food prices are largely flat, before spiking dramatically as a result of the shortages during the Great War. in the second half of the 20th century there are steady increases in the prices of all food products, with sugar showing the slowest increase in the selection of series presented.
+
+```{r, food-prices, fig.cap="Food price indices in Sweden: 1888-1969. Source: [Ljungberg's food price indices](https://ekh.lu.se/en/research/economic-history-data/lu-madd/prices-and-wages/industrial-products)"}
+df <- read_excel("food-price-indicies/Food-price-indicies-collected.xlsx") %>% 
+    janitor::clean_names()
+
+df <- df %>% 
+    rename_with(~ str_remove_all(.x, "_price_index_1910_12_100"))
+
+df %>% 
+    pivot_longer(-year) %>% 
+    mutate(name = str_to_sentence(str_replace_all(name, "_", " "))) %>% 
+    ggplot(aes(year, value, colour = name)) +
+    geom_line(cex = 1) +
+    scale_color_brewer(palette = "Paired") +
+    labs(x = NULL,
+         y = "Price index (1910 = 100)")
+```
+
+On the face of it, we do not see any evidence of rapidly falling food prices such that we might expect manufactured food products to make up a smaller share of manufactuing ouput based on the price effect alone. However, to conclude on this matter, we should apply some deflators and think more carefully about the differences between a declining share of manufacturing output and a decline in the real price of goods.
+
+### Conclusion
+
+It was interesting to look at the kinds of data available to investigate differences in regional productivity though the lens of a decline in the share that manufactured food products make up of all manufacturing output. I will continue to read and think about good questions to ask. 
+
+I look forward to chatting a bit about this!
+
