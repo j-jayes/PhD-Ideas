@@ -156,7 +156,7 @@ We have some really lovely records at our disposal! We start with an example of 
 knitr::include_graphics(normalizePath("~/Recon/PhD-Ideas/Swedish day wages/images/glass-production-1884.PNG"))
 ```
 
-Because of the tabular form of the data and the high quality scan, we can use the [Layout parser tool](https://github.com/Layout-Parser/layout-parser) to grab the data and put it into a usable form in no time at all. Table \@ref(tab:glass-prod-tab) shows the parsed data, neat! We see that Kronoberg County within Småland has the greatest number of factories producing glass in 1884, at 11.
+Because of the tabular form of the data and the high quality scan, we can use the [Layout parser tool](https://github.com/Layout-Parser/layout-parser) to grab the data and put it into a usable form in no time at all. Table \@ref(tab:glass-prod-tab) shows the parsed data, neat! We see that Kronoberg County within Småland has the greatest number of factories producing glass in 1884, at 11. Despite this, Vermlands län	produced the greatest volume of glass, more than one million chests, or *kistor*.
 
 ```{r, glass-prod-tab}
 # library(DT)
